@@ -11,6 +11,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useTranslation } from "react-i18next";
 import MovieDetail from "../components/MovieDetail";
+import i18n from "../i18n";
 
 interface Movie {
   id: number;
@@ -172,18 +173,19 @@ const HomePage: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${BASE_URL}${endpoint}`, {
-          params: {
-            api_key: API_KEY,
-            language: "tr-TR",
-            page: 1,
-          },
-        });
-        setMovies(response.data.results);
-      } catch (error) {
-        console.error("API çağrısı hatası:", error);
-        setMovies([]);
-      }
+  const response = await axios.get(`${BASE_URL}${endpoint}`, {
+    params: {
+      api_key: API_KEY,
+      language: i18n.language === "en" ? "en-US" : "tr-TR",  // BURADA DİL KONTROLÜ
+      page: 1,
+    },
+  });
+  setMovies(response.data.results);
+} catch (error) {
+  console.error("API çağrısı hatası:", error);
+  setMovies([]);
+}
+
 
       setLoading(false);
     };
@@ -389,16 +391,18 @@ const HomePage: React.FC = () => {
           }}
         />
         <h2>{t('welcome')} {userDisplayName}</h2>
-        <label htmlFor="search">{t('searchLabel')}</label>
-        <input
-          id="search"
-          type="text"
-          placeholder={t('searchPlaceholder')}
-          className="search-input"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ position: "relative", zIndex: 1 }}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px", maxWidth: "400px" }}>
+    <label htmlFor="search">{t('searchLabel')}</label>
+    <input
+      id="search"
+      type="text"
+      placeholder={t('searchPlaceholder')}
+      className="search-input"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      style={{ position: "relative", zIndex: 1 }}
+    />
+  </div>
       </div>
 
       {/* Film/Dizi listesi */}
