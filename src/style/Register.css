@@ -1,0 +1,96 @@
+.register-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  background-color: #e3f2fd; /* Açık mavi */
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3); /* Hafif mavi gölge */
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+}
+
+h2 {
+  text-align: center;
+  color: #1565c0; /* Orta koyu mavi */
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+label {
+  display: block !important;
+  margin-bottom: 0px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  color: #1565c0 !important; /* Orta koyu mavi - sayfa temasına uyumlu */
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  border: 1.5px solid #64b5f6; /* Orta açık mavi */
+  border-radius: 4px;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+  font-size: 15px;
+  color: #0d47a1;
+}
+
+input:focus {
+  border-color: #0d47a1; /* Odaklandığında koyu mavi */
+  outline: none;
+  box-shadow: 0 0 8px #2196f3aa;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.register-btn,
+.login-btn {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 10px;
+  background-color: #1976d2; /* Mavi buton */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.login-btn {
+  background-color: #64b5f6; /* Açık mavi buton */
+  color: #0d47a1;
+}
+
+.register-btn:hover {
+  background-color: #0d47a1; /* Daha koyu mavi */
+}
+
+.login-btn:hover {
+  background-color: #2196f3; /* Orta mavi hover */
+  color: white;
+}
+
+.error-text {
+  color: #d32f2f; /* Koyu kırmızı hata */
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
