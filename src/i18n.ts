@@ -112,8 +112,8 @@ const resources = {
       cancelButton: 'İptal',
       editButton: 'Düzenle',
       deleteButton: 'Sil',
-      addToFavorites: 'Favorilere Ekle',
-      removeFromFavorites: 'Favoriden Çıkar',
+      addToFavorites: '🤍 Favorilere Ekle',
+      removeFromFavorites: '❤️ Favoriden Çıkar',
       
       // Etiketler
       searchLabel: 'Ne aramıştınız?',
@@ -240,8 +240,8 @@ const resources = {
       cancelButton: 'Cancel',
       editButton: 'Edit',
       deleteButton: 'Delete',
-      addToFavorites: 'Add to Favorites',
-      removeFromFavorites: 'Remove from Favorites',
+      addToFavorites: '🤍 Add to Favorites',
+      removeFromFavorites: '❤️ Remove from Favorites',
       
       // Labels
       searchLabel: 'What are you looking for?',

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 
 interface Movie {
   id: number;
@@ -22,16 +23,43 @@ interface MovieDetailProps {
   isFavorite: boolean;
 }
 
+const API_KEY = 'cbd398738d36d235dfc790387d06f12d'; // Buraya kendi API anahtarını koy
+
 const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavorite, isFavorite }) => {
-  const { t } = useTranslation();
-  
+  const { t, i18n } = useTranslation();
+  const [movieDetails, setMovieDetails] = useState<Movie | null>(null);
+
+  useEffect(() => {
+    const fetchMovieDetails = async () => {
+      try {
+        const response = await axios.get(
+          `https://api.themoviedb.org/3/movie/${movie.id}`,
+          {
+            params: {
+              api_key: API_KEY,
+              language: i18n.language, // seçilen dile göre
+            },
+          }
+        );
+        setMovieDetails(response.data);
+      } catch (error) {
+        console.error("Film detayları alınamadı:", error);
+      }
+    };
+
+    fetchMovieDetails();
+  }, [movie.id, i18n.language]);
+
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
-  const title = movie.title || movie.name || t('noTitle');
-  const poster = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : null;
-  const releaseDate = movie.release_date || movie.first_air_date || t('unknown');
-  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
-  const voteCount = movie.vote_count || 0;
-  const popularity = movie.popularity ? Math.round(movie.popularity) : 0;
+
+  // movieDetails varsa ondan yoksa props'dan alıyoruz
+  const title = movieDetails?.title || movieDetails?.name || movie.title || movie.name || t('noTitle');
+  const poster = (movieDetails?.poster_path || movie.poster_path) ? `${IMAGE_BASE_URL}${movieDetails?.poster_path || movie.poster_path}` : null;
+  const releaseDate = movieDetails?.release_date || movieDetails?.first_air_date || movie.release_date || movie.first_air_date || t('unknown');
+  const rating = (movieDetails?.vote_average || movie.vote_average)?.toFixed(1) || 'N/A';
+  const voteCount = movieDetails?.vote_count || movie.vote_count || 0;
+  const popularity = movieDetails?.popularity ? Math.round(movieDetails.popularity) : (movie.popularity ? Math.round(movie.popularity) : 0);
+  const overview = movieDetails?.overview || movie.overview || t('noOverview');
 
   return (
     <div style={{
@@ -83,9 +111,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavor
             {/* Poster */}
             <div style={{ flexShrink: 0 }}>
               {poster ? (
-                <img 
-                  src={poster} 
-                  alt={title} 
+                <img
+                  src={poster}
+                  alt={title}
                   style={{
                     width: '300px',
                     height: '450px',
@@ -113,9 +141,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavor
 
             {/* Bilgiler */}
             <div style={{ flex: 1 }}>
-              <h1 style={{ 
-                margin: '0 0 15px 0', 
-                fontSize: '32px', 
+              <h1 style={{
+                margin: '0 0 15px 0',
+                fontSize: '32px',
                 fontWeight: 'bold',
                 color: '#333'
               }}>
@@ -124,38 +152,38 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavor
 
               {/* Favori Butonu */}
               <button
-                onClick={() => onToggleFavorite(movie)}
-                style={{
-                  background: 'none',
-                  border: '2px solid #007bff',
-                  borderRadius: '6px',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  marginBottom: '20px',
-                  color: isFavorite ? 'white' : '#007bff',
-                  backgroundColor: isFavorite ? '#007bff' : 'transparent',
-                  transition: 'all 0.3s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isFavorite) {
-                    e.currentTarget.style.backgroundColor = '#f8f9fa';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isFavorite) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                {isFavorite ? '❤️ Favorilerden Çıkar' : '🤍 Favorilere Ekle'}
-              </button>
+  onClick={() => onToggleFavorite(movie)}
+  style={{
+    background: 'none',
+    border: '2px solid #007bff',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginBottom: '20px',
+    color: isFavorite ? 'white' : '#007bff',
+    backgroundColor: isFavorite ? '#007bff' : 'transparent',
+    transition: 'all 0.3s'
+  }}
+  onMouseEnter={(e) => {
+    if (!isFavorite) {
+      e.currentTarget.style.backgroundColor = '#f8f9fa';
+    }
+  }}
+  onMouseLeave={(e) => {
+    if (!isFavorite) {
+      e.currentTarget.style.backgroundColor = 'transparent';
+    }
+  }}
+>
+  {isFavorite ? t('removeFromFavorites') : t('addToFavorites')}
+</button>
 
               {/* Detaylar */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '20px', 
+                <div style={{
+                  display: 'flex',
+                  gap: '20px',
                   marginBottom: '15px',
                   flexWrap: 'wrap'
                 }}>
@@ -176,20 +204,20 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavor
 
               {/* Açıklama */}
               <div>
-                <h3 style={{ 
-                  margin: '0 0 10px 0', 
+                <h3 style={{
+                  margin: '0 0 10px 0',
                   fontSize: '18px',
                   color: '#333'
                 }}>
-                  Özet
+                  {t('overview')}
                 </h3>
-                <p style={{ 
-                  margin: 0, 
+                <p style={{
+                  margin: 0,
                   lineHeight: '1.6',
                   color: '#666',
                   fontSize: '16px'
                 }}>
-                  {movie.overview || 'Bu içerik için henüz açıklama bulunmuyor.'}
+                  {overview}
                 </p>
               </div>
             </div>
@@ -200,4 +228,4 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ movie, onClose, onToggleFavor
   );
 };
 
-export default MovieDetail; 
+export default MovieDetail;

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher: React.FC = () => {
   const { i18n } = useTranslation();
+  const currentLang = i18n.language.split('-')[0]; // 'en-US' gibi durumları 'en' olarak al
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -21,8 +22,8 @@ const LanguageSwitcher: React.FC = () => {
         onClick={() => changeLanguage('tr')}
         style={{
           padding: '8px 12px',
-          backgroundColor: i18n.language === 'tr' ? '#007bff' : '#f8f9fa',
-          color: i18n.language === 'tr' ? 'white' : '#333',
+          backgroundColor: currentLang === 'tr' ? '#007bff' : '#f8f9fa',
+          color: currentLang === 'tr' ? 'white' : '#333',
           border: '1px solid #ccc',
           borderRadius: '4px',
           cursor: 'pointer',
@@ -35,8 +36,8 @@ const LanguageSwitcher: React.FC = () => {
         onClick={() => changeLanguage('en')}
         style={{
           padding: '8px 12px',
-          backgroundColor: i18n.language === 'en' ? '#007bff' : '#f8f9fa',
-          color: i18n.language === 'en' ? 'white' : '#333',
+          backgroundColor: currentLang === 'en' ? '#007bff' : '#f8f9fa',
+          color: currentLang === 'en' ? 'white' : '#333',
           border: '1px solid #ccc',
           borderRadius: '4px',
           cursor: 'pointer',
@@ -49,4 +50,4 @@ const LanguageSwitcher: React.FC = () => {
   );
 };
 
-export default LanguageSwitcher; 
+export default LanguageSwitcher;
