@@ -129,6 +129,7 @@ const resources = {
       googleAccountLogin: 'Google Hesabı ile Giriş',
       googlePasswordChangeDisabled: 'Google hesabınızla giriş yaptığınız için şifre değiştirme özelliği kullanılamamaktadır. Şifrenizi değiştirmek için Google hesabınızın ayarlarından şifre değişikliği yapabilirsiniz.',
       googlePasswordFormDisabled: 'Google hesabınızla giriş yaptığınız için şifre değiştirme formu devre dışıdır.',
+      googleLoginButton: 'Google ile Giriş Yap',
     }
   },
   en: {
@@ -256,6 +257,7 @@ const resources = {
       googleAccountLogin: 'Login with Google Account',
       googlePasswordChangeDisabled: 'Password change feature is not available because you logged in with your Google account. You can change your password from your Google account settings.',
       googlePasswordFormDisabled: 'Password change form is disabled because you logged in with your Google account.',
+      googleLoginButton: 'Login with Google',
     }
   }
 };

@@ -394,7 +394,7 @@ const Login: React.FC = () => {
             alt="Google" 
             style={{ width: "18px", height: "18px" }}
           />
-          Google ile Giriş Yap
+          {t('googleLoginButton')}
         </button>
       </form>
     </div>
