@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { setUser, setError, clearError } from "../features/auth/authSlice";
-import { login, loginWithGoogle } from "../utils/auth";
 import { RootState } from "../app/store";
 import { api } from "../api/client";
 import { useTranslation } from "react-i18next";
@@ -69,66 +68,6 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    dispatch(clearError());
-    setIsLoading(true);
-
-    try {
-      console.log("Google ile giriş başlatılıyor...");
-      const userCredential = await loginWithGoogle();
-      console.log("Google giriş başarılı:", userCredential);
-      const user = userCredential.user;
-
-      if (user) {
-        try {
-          // Backend'den Firebase UID ile JWT token al
-          const authResponse = await api.post("/auth/firebase-login", {
-            firebase_uid: user.uid,
-            email: user.email,
-            display_name: user.displayName
-          });
-
-          // JWT token'ı localStorage'a kaydet
-          localStorage.setItem("token", authResponse.data.token);
-          
-          // Kullanıcı bilgilerini Redux store'a kaydet
-          dispatch(setUser({
-            uid: user.uid,
-            email: user.email ?? "",
-            displayName: authResponse.data.user.first_name + " " + authResponse.data.user.last_name,
-          }));
-
-          navigate("/homepage");
-        } catch (error) {
-          console.error("Backend'den token alınamadı:", error);
-          dispatch(setError("Backend bağlantısı kurulamadı. Lütfen tekrar deneyin."));
-        }
-      } else {
-        dispatch(setError("Kullanıcı bilgisi alınamadı."));
-      }
-    } catch (err: any) {
-      console.error("Google giriş hatası:", err);
-      console.error("Hata kodu:", err.code);
-      console.error("Hata mesajı:", err.message);
-      
-      let errorMessage = "Google ile giriş başarısız: " + err.message;
-      
-      // Firebase hata kodlarını çevir
-      if (err.code === "auth/popup-closed-by-user") {
-        errorMessage = "Google giriş penceresi kapatıldı.";
-      } else if (err.code === "auth/popup-blocked") {
-        errorMessage = "Google giriş penceresi engellendi. Lütfen popup engelleyiciyi kapatın.";
-      } else if (err.code === "auth/cancelled-popup-request") {
-        errorMessage = "Google giriş işlemi iptal edildi.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.";
-      }
-      
-      dispatch(setError(errorMessage));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleRegisterClick = () => {
     navigate("/register");
@@ -315,45 +254,6 @@ const Login: React.FC = () => {
           {t('registerButton')}
         </button>
         
-        {/* Google ile Giriş Butonu */}
-        <button
-          type="button"
-          className="google-login-btn"
-          onClick={handleGoogleLogin}
-          disabled={isLoading}
-          style={{
-            width: "100%",
-            padding: "12px",
-            backgroundColor: "#fff",
-            color: "#333",
-            border: "2px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            marginTop: "10px",
-            transition: "all 0.3s ease"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#f8f9fa";
-            e.currentTarget.style.borderColor = "#007bff";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#fff";
-            e.currentTarget.style.borderColor = "#ddd";
-          }}
-        >
-          <img 
-            src="https://developers.google.com/identity/images/g-logo.png" 
-            alt="Google" 
-            style={{ width: "18px", height: "18px" }}
-          />
-          {t('googleLoginButton')}
-        </button>
       </form>
     </div>
   );

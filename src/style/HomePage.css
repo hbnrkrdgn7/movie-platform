@@ -217,3 +217,39 @@ body {
   position: relative;
   z-index: 1;
 }
+/* Yorum butonu */
+.comment-button {
+  position: absolute;
+  right: 50px; /* Favori butonunun solunda */
+  bottom: 10px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+  user-select: none;
+  color: #1976d2;
+  outline: none;
+}
+
+.comment-button:hover {
+  transform: scale(1.2);
+  color: #ff9800; /* Hover rengini turuncu yaptım */
+}
+
+/* MovieDetail yorum butonu */
+.detail-comment-button {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  margin-left: 10px; /* Favori butonunun yanına */
+  transition: transform 0.2s ease, color 0.2s ease;
+  color: #1976d2;
+}
+
+.detail-comment-button:hover {
+  transform: scale(1.2);
+  color: #ff9800; /* Hover rengi turuncu */
+}
+

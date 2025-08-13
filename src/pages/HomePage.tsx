@@ -40,7 +40,6 @@ const HomePage: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const navigate = useNavigate();
 
-  // Auth state listener - artık gerekli değil, sadece token kontrolü yap
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
@@ -414,7 +413,7 @@ const HomePage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            //backgroundImage: `url(${images})`,
+            backgroundImage: `url(${Image})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             filter: "brightness(1.5) blur(1px)",
@@ -487,11 +486,23 @@ const HomePage: React.FC = () => {
                 >
                   {favorites.some((f) => f.id === movie.id) ? "❤️" : "🤍"}
                 </button>
+                <button
+  className="comment-button"
+  onClick={(e) => {
+    e.stopPropagation();
+    setSelectedMovie(movie);
+    console.log("Yorum butonuna tıklandı:", movie.title || movie.name);
+  }}
+  title={t('comment')}
+>
+  💬
+</button>
               </div>
             );
           })}
         </div>
       )}
+      
 
       {/* Film/Dizi Detay Modal */}
       {selectedMovie && (

@@ -8,28 +8,22 @@ import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import { useAppDispatch } from './app/hooks';
 import { setUser, clearUser } from './features/auth/authSlice';
-import { subscribeToAuthChanges } from './utils/auth';
 import './i18n'; // i18n konfigürasyonunu import et
 
 function AppContent() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges((user) => {
-      if (user) {
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email || "",
-          displayName: user.displayName || user.email?.split("@")[0],
-        }));
-      } else {
-        dispatch(clearUser());
-      }
-    });
+    // LocalStorage'dan token varsa kullanıcıyı set et
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
-    return () => {
-      unsubscribe();
-    };
+    if (token && storedUser) {
+      const userData = JSON.parse(storedUser);
+      dispatch(setUser(userData));
+    } else {
+      dispatch(clearUser());
+    }
   }, [dispatch]);
 
   return (

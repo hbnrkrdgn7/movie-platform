@@ -3,9 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 
-const authRouter = require('./routers/auth');
-const favoritesRouter = require('./routers/favorites');
-const usersRouter = require('./routers/users');
+const authRouter = require('./routes/auth');
+const favoritesRouter = require('./routes/favorites');
+const usersRouter = require('./routes/users');
 
 const app = express();
 const port = process.env.PORT || 5000;
