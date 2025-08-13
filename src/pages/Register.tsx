@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebaseConfig";
-import { db } from "../firebaseConfig";
-import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import "../style/Register.css";
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { setError, clearError } from '../features/auth/authSlice';
 import { useTranslation } from 'react-i18next';
+import { api } from '../api/client';
 
 const Register: React.FC = () => {
   const [firstName, setFirstName] = useState("");
@@ -35,13 +32,11 @@ const Register: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Kullanıcı adı kontrolü
+  // Kullanıcı adı kontrolü (backend)
   const checkUsernameExists = async (username: string) => {
     try {
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
+      const res = await api.get(`/users/check-username?username=${encodeURIComponent(username)}`);
+      return res.data?.exists === true;
     } catch (error) {
       console.error("Kullanıcı adı kontrolü hatası:", error);
       return false;
@@ -69,64 +64,35 @@ const Register: React.FC = () => {
         return;
       }
 
-      // Firebase Authentication ile kullanıcı oluşturma
-      console.log("Firebase Authentication başlatılıyor...");
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("Firebase Authentication başarılı:", userCredential);
-      const user = userCredential.user;
+      // Backend'e kayıt isteği
+      const response = await api.post('/auth/register', {
+        first_name: firstName,
+        last_name: lastName,
+        username,
+        email,
+        password,
+      });
 
-      // Firestore'a kullanıcı bilgilerini kaydetme
-      try {
-        console.log("Firestore'a kayıt başlatılıyor...");
-        await setDoc(doc(db, "users", user.uid), {
-          firstName,
-          lastName,
-          username,
-          email,
-          createdAt: new Date(),
-        });
-        console.log("Firestore kayıt başarılı");
-      } catch (firestoreError: any) {
-        console.error("Firestore kayıt hatası:", firestoreError);
-        // Firestore hatası olsa bile kullanıcı oluşturuldu, devam et
-      }
-
-      // Kullanıcıyı çıkış yaptır (otomatik giriş yapmasın)
-      await auth.signOut();
-
-      alert(t('registrationSuccess'));
-      navigate("/login");
-    } catch (error: any) {
-      console.error("Kayıt hatası:", error);
-      console.error("Hata kodu:", error.code);
-      console.error("Hata mesajı:", error.message);
-      
-      let errorMessage = t('registrationError', { error: error.message });
-      
-      // Firebase hata kodlarını çevir
-      if (error.code === "auth/email-already-in-use") {
-        errorMessage = t('emailInUse');
-      } else if (error.code === "auth/weak-password") {
-        errorMessage = t('weakPassword');
-      } else if (error.code === "auth/invalid-email") {
-        errorMessage = t('invalidEmail');
-      } else if (error.code === "auth/network-request-failed") {
-        errorMessage = t('networkError');
-      } else if (error.code === "auth/operation-not-allowed") {
-        errorMessage = t('operationNotAllowed');
-      } else if (error.code === "auth/too-many-requests") {
-        errorMessage = t('tooManyRequests');
-      } else if (error.code === "auth/invalid-credential") {
-        errorMessage = t('invalidCredentials');
-      } else if (error.code === "auth/missing-password") {
-        errorMessage = t('missingPassword');
-      } else if (error.code === "auth/missing-email") {
-        errorMessage = t('missingEmail');
+      if (response.data?.user) {
+        alert(t('registrationSuccess'));
+        navigate('/login');
       } else {
-        errorMessage = t('missingFields');
+        dispatch(setError(t('registrationError', { error: 'Bilinmeyen hata' })));
       }
-      
-      dispatch(setError(errorMessage));
+    } catch (err: any) {
+      console.error('Kayıt hatası:', err);
+      if (err.response?.status === 409) {
+        const msg = err.response?.data?.message || '';
+        if (msg.includes('Email')) {
+          dispatch(setError(t('emailInUse')));
+        } else if (msg.includes('Kullanıcı adı')) {
+          dispatch(setError(t('usernameInUse')));
+        } else {
+          dispatch(setError(t('registrationError', { error: msg })));
+        }
+      } else {
+        dispatch(setError(t('registrationError', { error: err.message || 'Hata' })));
+      }
     } finally {
       setIsLoading(false);
     }

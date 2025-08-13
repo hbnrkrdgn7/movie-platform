@@ -4,11 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "../style/HomePage.css";
 import { useSelector } from "react-redux";
 import type { RootState } from "../app/store";
-import images from "../assets/images.jpeg";
-import { auth } from "../firebaseConfig";
-import { db } from "../firebaseConfig";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { api } from "../api/client";
 import { useTranslation } from "react-i18next";
 import MovieDetail from "../components/MovieDetail";
 import i18n from "../i18n";
@@ -44,103 +40,113 @@ const HomePage: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const navigate = useNavigate();
 
-  // Auth state listener
+  // Auth state listener - artık gerekli değil, sadece token kontrolü yap
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("Auth state değişti:", currentUser);
-      setIsUserLoaded(true);
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
       
-      if (currentUser) {
-        console.log("Kullanıcı giriş yaptı:", currentUser.uid);
-        fetchUserInfo(currentUser);
-        fetchFavorites(currentUser);
-      } else {
-        console.log("Kullanıcı çıkış yaptı");
-        setFavorites([]);
-        setUserDisplayName("");
-      }
-    });
+      if (token) {
+        try {
+          // Önce local cache'den hızlıca göster
+          const cachedUser = localStorage.getItem("user");
+          if (cachedUser) {
+            try {
+              const u = JSON.parse(cachedUser);
+              const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email?.split("@")[0] || "";
+              setUserDisplayName(name);
+            } catch {}
+          }
 
-    return () => unsubscribe();
-  }, []);
-
-  // Kullanıcı bilgilerini Firestore'dan çek
-  const fetchUserInfo = async (currentUser: any) => {
-    try {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const firstName = userData.firstName || "";
-        const lastName = userData.lastName || "";
-        const fullName = `${firstName} ${lastName}`.trim();
-        
-        if (fullName) {
-          setUserDisplayName(fullName);
-        } else {
-          setUserDisplayName(user?.displayName || currentUser.email?.split("@")[0] || "");
+          // Token varsa kullanıcı bilgilerini backend'den al (cache-buster ile)
+          const response = await api.get(`/users/me?ts=${Date.now()}`);
+          const userData = response.data;
+          
+          // Kullanıcı bilgilerini ayarla
+          let fullName = "";
+          if (userData.first_name && userData.last_name) {
+            fullName = `${userData.first_name} ${userData.last_name}`.trim();
+          } else if (userData.first_name) {
+            // Sadece isim varsa, email'den soyisim çıkar
+            const emailName = userData.email?.split("@")[0] || "";
+            if (emailName.includes(".")) {
+              const emailParts = emailName.split(".");
+              const firstName = emailParts[0] || userData.first_name;
+              const lastName = emailParts.slice(1).join(" ") || "";
+              fullName = `${firstName} ${lastName}`.trim();
+            } else {
+              fullName = userData.first_name;
+            }
+          } else {
+            // Hiç isim yoksa email'den çıkar
+            const emailName = userData.email?.split("@")[0] || "";
+            if (emailName.includes(".")) {
+              const emailParts = emailName.split(".");
+              const firstName = emailParts[0] || "";
+              const lastName = emailParts.slice(1).join(" ") || "";
+              fullName = `${firstName} ${lastName}`.trim();
+            } else {
+              fullName = emailName;
+            }
+          }
+          
+          setUserDisplayName(fullName || userData.email?.split("@")[0] || "");
+          // Local cache'e yaz
+          localStorage.setItem("user", JSON.stringify(userData));
+          
+          // Favorileri çek
+          await fetchFavorites();
+        } catch (error) {
+          console.error("Token geçersiz, çıkış yapılıyor:", error);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUserDisplayName("");
+          setFavorites([]);
+          navigate("/login");
         }
       } else {
-        setUserDisplayName(user?.displayName || currentUser.email?.split("@")[0] || "");
+        // Token yoksa login sayfasına yönlendir
+        navigate("/login");
       }
-    } catch (error) {
-      console.error("Kullanıcı bilgisi alınırken hata:", error);
-      setUserDisplayName(user?.displayName || currentUser.email?.split("@")[0] || "");
-    }
-  };
+    };
 
-  // Favorileri Firestore'dan çek
-  const fetchFavorites = async (currentUser: any) => {
-    console.log("Favoriler Firestore'dan çekiliyor...");
-    console.log("Kullanıcı UID:", currentUser.uid);
+    checkAuth();
+  }, [navigate]);
+
+  // Kullanıcı bilgilerini backend'den çek - artık gerekli değil
+  // const fetchUserInfo = async (currentUser: any) => { ... };
+
+  // Favorileri backend'den çek
+  const fetchFavorites = async () => {
+    console.log("Favoriler backend'den çekiliyor...");
 
     try {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        console.log("Firestore kullanıcı verisi:", userData);
-        
-        const savedFavorites = userData.favorites || [];
-        console.log("Firestore'dan gelen favoriler:", savedFavorites);
-        
-        setFavorites(savedFavorites);
-      } else {
-        console.log("Firestore'da kullanıcı dokümanı bulunamadı");
-      }
+      const response = await api.get("/favorites");
+      console.log("Backend'den gelen favoriler:", response.data);
+      
+      // Backend'den gelen veriyi Movie formatına çevir
+      const formattedFavorites: Movie[] = (response.data || []).map((fav: any) => ({
+        id: fav.movie_id,
+        title: fav.movie_title,
+        poster_path: fav.movie_poster,
+        overview: fav.movie_overview,
+        release_date: fav.movie_release_date
+      }));
+      
+      setFavorites(formattedFavorites);
     } catch (error) {
       console.error("Favoriler alınırken hata:", error);
+      setFavorites([]);
     }
   };
 
-  // Favorileri Firestore'a kaydet
-  const saveFavoritesToFirestore = async (newFavorites: Movie[]) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      console.log("Kullanıcı giriş yapmamış, favoriler kaydedilemiyor");
-      return;
-    }
 
-    console.log("Favoriler Firestore'a kaydediliyor...");
-    console.log("Yeni favoriler:", newFavorites);
-
-    try {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userDocRef, {
-        favorites: newFavorites
-      });
-      console.log("Favoriler başarıyla kaydedildi");
-    } catch (error) {
-      console.error("Favoriler kaydedilirken hata:", error);
-    }
-  };
 
   // Çıkış yap fonksiyonu
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      // JWT token'ı temizle
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       console.log("Kullanıcı çıkış yaptı");
       navigate("/login");
     } catch (error) {
@@ -194,8 +200,8 @@ const HomePage: React.FC = () => {
   }, [selectedCategory, t]);
 
   const toggleFavorite = async (movie: Movie) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       console.log("Kullanıcı giriş yapmamış, favori eklenemiyor");
       return;
     }
@@ -203,18 +209,44 @@ const HomePage: React.FC = () => {
     console.log("Favori toggle ediliyor:", movie.title || movie.name);
     
     const exists = favorites.find((fav) => fav.id === movie.id);
-    let newFavorites: Movie[];
 
     if (exists) {
+      // Favoriden çıkar
       console.log("Favoriden çıkarılıyor:", movie.title || movie.name);
-      newFavorites = favorites.filter((fav) => fav.id !== movie.id);
+      try {
+        await api.delete(`/favorites/${movie.id}`);
+        setFavorites(favorites.filter((fav) => fav.id !== movie.id));
+        console.log("Favori başarıyla silindi");
+      } catch (error) {
+        console.error("Favori silinirken hata:", error);
+      }
     } else {
+      // Favorilere ekle
       console.log("Favorilere ekleniyor:", movie.title || movie.name);
-      newFavorites = [...favorites, movie];
+      try {
+        const response = await api.post("/favorites", {
+          movie_id: movie.id,
+          movie_title: movie.title || movie.name,
+          movie_poster: movie.poster_path,
+          movie_overview: movie.overview,
+          movie_release_date: movie.release_date || movie.first_air_date
+        });
+        
+        // Backend'den gelen veriyi Movie formatına çevir
+        const newFavorite: Movie = {
+          id: response.data.movie_id,
+          title: response.data.movie_title,
+          poster_path: response.data.movie_poster,
+          overview: response.data.movie_overview,
+          release_date: response.data.movie_release_date
+        };
+        
+        setFavorites([...favorites, newFavorite]);
+        console.log("Favori başarıyla eklendi");
+      } catch (error) {
+        console.error("Favori eklenirken hata:", error);
+      }
     }
-
-    setFavorites(newFavorites);
-    await saveFavoritesToFirestore(newFavorites);
   };
 
   const filteredMovies =
@@ -382,7 +414,7 @@ const HomePage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundImage: `url(${images})`,
+            //backgroundImage: `url(${images})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             filter: "brightness(1.5) blur(1px)",

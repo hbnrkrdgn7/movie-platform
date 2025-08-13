@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { updatePassword,reauthenticateWithCredential,EmailAuthProvider,signOut,} from "firebase/auth";
 import { auth } from "../firebaseConfig";
-import { db } from "../firebaseConfig";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { api } from "../api/client";
 import "../style/Settings.css";
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { setError, clearError } from '../features/auth/authSlice';
@@ -64,15 +63,20 @@ const Settings: React.FC = () => {
       console.log("Redux User:", reduxUser);
 
       try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          console.log("Firestore'dan gelen veri:", data);
-          setUserInfo(data as typeof userInfo);
+        const response = await api.get("/users/me");
+        if (response.data) {
+          const data = response.data;
+          console.log("Backend'den gelen veri:", data);
+          
+          // Backend veri formatını frontend formatına çevir
+          setUserInfo({
+            firstName: data.first_name,
+            lastName: data.last_name,
+            username: data.username,
+            email: data.email
+          });
         } else {
-          console.log("Firestore'da kullanıcı bilgisi bulunamadı");
+          console.log("Backend'de kullanıcı bilgisi bulunamadı");
         }
       } catch (error) {
         console.error("Kullanıcı bilgisi alınırken hata:", error);
@@ -145,13 +149,8 @@ const Settings: React.FC = () => {
   // Kullanıcı adı kontrolü
   const checkUsernameExists = async (username: string, currentUserId: string) => {
     try {
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const querySnapshot = await getDocs(q);
-      
-      // Mevcut kullanıcının kendi kullanıcı adını değiştirmesine izin ver
-      const existingUser = querySnapshot.docs.find(doc => doc.id !== currentUserId);
-      return !!existingUser;
+      const response = await api.get(`/users/check-username?username=${encodeURIComponent(username)}`);
+      return response.data.exists || false;
     } catch (error) {
       console.error("Kullanıcı adı kontrolü hatası:", error);
       return false;
@@ -188,8 +187,7 @@ const Settings: React.FC = () => {
         return;
       }
 
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
+      await api.patch("/users/me", {
         username: newUsername.trim()
       });
 

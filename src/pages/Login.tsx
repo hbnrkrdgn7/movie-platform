@@ -4,8 +4,7 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { setUser, setError, clearError } from "../features/auth/authSlice";
 import { login, loginWithGoogle } from "../utils/auth";
 import { RootState } from "../app/store";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { api } from "../api/client";
 import { useTranslation } from "react-i18next";
 import "../style/Login.css";
 
@@ -33,64 +32,35 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      console.log("Firebase login başlatılıyor...");
-      const userCredential = await login(email, password);
-      console.log("Firebase login başarılı:", userCredential);
-      const user = userCredential.user;
+      // Email/şifre ile giriş yaparken kendi backend endpoint'ini kullan
+      console.log("Email/şifre ile giriş başlatılıyor...");
+      
+      // Backend'den email/şifre ile JWT token al
+      const authResponse = await api.post("/auth/login", {
+        email: email,
+        password: password
+      });
 
-      if (user) {
-        // Firestore'dan kullanıcı bilgilerini çek
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+      // JWT token'ı localStorage'a kaydet
+      localStorage.setItem("token", authResponse.data.token);
+      
+      // Kullanıcı bilgilerini Redux store'a kaydet
+      dispatch(setUser({
+        uid: authResponse.data.user.id.toString(), // PostgreSQL ID'yi string olarak kullan
+        email: authResponse.data.user.email,
+        displayName: authResponse.data.user.first_name + " " + authResponse.data.user.last_name,
+      }));
 
-        let displayName = user.displayName ?? "";
-
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          // İsim ve soyismi birleştir
-          displayName = `${userData.firstName ?? ""} ${userData.lastName ?? ""}`.trim();
-        }
-
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email ?? "",
-          displayName: displayName || user.email?.split("@")[0],
-        }));
-
-        navigate("/homepage");
-      } else {
-        dispatch(setError("Kullanıcı bilgisi alınamadı."));
-      }
+      navigate("/homepage");
     } catch (err: any) {
       console.error("Giriş hatası:", err);
-      console.error("Hata kodu:", err.code);
-      console.error("Hata mesajı:", err.message);
       
-      let errorMessage = "Giriş başarısız: " + err.message;
+      let errorMessage = "Giriş başarısız.";
       
-      // Firebase hata kodlarını çevir
-      if (err.code === "auth/user-not-found") {
-        errorMessage = t('emailNotFound');
-      } else if (err.code === "auth/wrong-password") {
-        errorMessage = t('wrongPassword');
-      } else if (err.code === "auth/invalid-email") {
-        errorMessage = t('invalidEmail');
-      } else if (err.code === "auth/too-many-requests") {
-        errorMessage = t('tooManyRequests');
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = t('networkError');
-      } else if (err.code === "auth/user-disabled") {
-        errorMessage = t('userDisabled');
-      } else if (err.code === "auth/invalid-credential") {
-        errorMessage = t('invalidCredentials');
-      } else if (err.code === "auth/operation-not-allowed") {
-        errorMessage = "Email/şifre ile giriş Firebase Console'da etkin değil. Lütfen Firebase Console'da Authentication > Sign-in method > Email/Password'ü etkinleştirin.";
-      } else if (err.code === "auth/missing-password") {
-        errorMessage = t('missingPassword');
-      } else if (err.code === "auth/missing-email") {
-        errorMessage = t('missingEmail');
-      } else {
-        errorMessage = t('missingFields');
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
       
       dispatch(setError(errorMessage));
@@ -110,41 +80,29 @@ const Login: React.FC = () => {
       const user = userCredential.user;
 
       if (user) {
-        // Firestore'dan kullanıcı bilgilerini çek
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        let displayName = user.displayName ?? "";
-
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          // İsim ve soyismi birleştir
-          displayName = `${userData.firstName ?? ""} ${userData.lastName ?? ""}`.trim();
-        }
-
-        // Eğer kullanıcı Firestore'da yoksa, Google bilgileriyle oluştur
-        if (!userDocSnap.exists()) {
-          const firstName = user.displayName?.split(" ")[0] || "";
-          const lastName = user.displayName?.split(" ").slice(1).join(" ") || "";
-          
-          await setDoc(doc(db, "users", user.uid), {
-            firstName,
-            lastName,
-            username: user.displayName || user.email?.split("@")[0] || "",
+        try {
+          // Backend'den Firebase UID ile JWT token al
+          const authResponse = await api.post("/auth/firebase-login", {
+            firebase_uid: user.uid,
             email: user.email,
-            createdAt: new Date(),
+            display_name: user.displayName
           });
+
+          // JWT token'ı localStorage'a kaydet
+          localStorage.setItem("token", authResponse.data.token);
           
-          displayName = user.displayName || user.email?.split("@")[0] || "";
+          // Kullanıcı bilgilerini Redux store'a kaydet
+          dispatch(setUser({
+            uid: user.uid,
+            email: user.email ?? "",
+            displayName: authResponse.data.user.first_name + " " + authResponse.data.user.last_name,
+          }));
+
+          navigate("/homepage");
+        } catch (error) {
+          console.error("Backend'den token alınamadı:", error);
+          dispatch(setError("Backend bağlantısı kurulamadı. Lütfen tekrar deneyin."));
         }
-
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email ?? "",
-          displayName: displayName || user.email?.split("@")[0],
-        }));
-
-        navigate("/homepage");
       } else {
         dispatch(setError("Kullanıcı bilgisi alınamadı."));
       }
